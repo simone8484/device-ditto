@@ -9,6 +9,7 @@ import java.io.InputStream;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Optional;
@@ -76,18 +77,30 @@ public class App
 	
     public static void main( String[] args )  throws ExecutionException, InterruptedException, IOException 
     {
+    	Scripts mqtt = new Scripts();
         LOGGER.info("Avvio applicazione");
         final DittoClient client = DittoClients.newInstance(createMessagingProvider()).connect().toCompletableFuture()
 				.join();
-        
+    	client.live().startConsumption().toCompletableFuture().join();
         LOGGER.info("Creazione istanza client ditto avvenuta con successo!");
-        getDigitalThing(client);
+        
+    	final String namespace = CONFIG.getProperty("ditto.search.namespace", CONFIG.getProperty("ditto.namespace"));
+		final String thing = CONFIG.getProperty("ditto.thing.id");
+		final String id = namespace + ":" + thing;
+        getDigitalThing(client, id);
 		LOGGER.info("Caricamento digitalTwin completata!");
 		
+		Status status = new Status(client, id);
+		status.run();
 		
-		promptEnterKey();
+		useLiveMessages(client, mqtt, id);
 		
+		System.out.println("\n\nFinished with LIVE messages demo");
+		Thread.sleep(500);
 		
+		client.destroy();
+		System.out.println("\n\nDittoClientUsageExamples successfully completed!");
+		System.exit(0);
     }
     
 	private static void promptEnterKey() throws InterruptedException {
@@ -99,7 +112,8 @@ public class App
 		}
 	}
 	
-	private static void useLiveMessages(final DittoClient clientAtDevice, Scripts mqtt)
+
+	private static void useLiveMessages(final DittoClient clientAtDevice, Scripts mqtt, String id)
 			throws InterruptedException, ExecutionException, IOException {
 		
 		ObjectMapper objectMapper = new ObjectMapper();
@@ -124,7 +138,7 @@ public class App
 					if (messagePayload.get("cups") != null) {
 						int cups = messagePayload.get("cups").asInt();
 						final Adaptable modifyFeatureDesiredProperties = Adaptable
-								.newBuilder(TopicPath.newBuilder(ThingId.of("org.eclipse.ditto:smartcoffee")).things()
+								.newBuilder(TopicPath.newBuilder(ThingId.of(id)).things()
 										.twin().commands().modify().build())
 								.withPayload(
 										Payload.newBuilder(JsonPointer.of("/features/coffee-brewer/properties"))
@@ -140,7 +154,7 @@ public class App
 												throwable.toString());
 									} else {
 										LOGGER.info("proprietà modificata con successo: '{}'", adaptable);
-										getDigitalThing(clientAtDevice);
+										getDigitalThing(clientAtDevice, id);
 									}
 								}));
 					}
@@ -165,13 +179,14 @@ public class App
 						// close the channel
 						channel.close();
 						if (!channel.isOpen()) {
-							if (mqtt.estractFileTar()) {
+							String baseDir = CONFIG.getProperty("ditto.base.firmware.dir");
+							if (mqtt.estractFileTar(baseDir)) {
 								LOGGER.info("Estrazione del file avvenuta con successo!");
 								int frequencyUpdate = thingRappresentation.findValue("frequencyUpdate").asInt();
 								String urlBroker = thingRappresentation.findValue("urlBroker").asText();
 								if (mqtt.p != null && mqtt.p.isAlive()) {
 									mqtt.setSkip(false);
-									final Adaptable modifyFrequencyProperties = setMqttProperty("org.eclipse.ditto:smartcoffee",urlBroker,frequencyUpdate, mqtt.getPid());
+									final Adaptable modifyFrequencyProperties = setMqttProperty(id,urlBroker,frequencyUpdate, mqtt.getPid());
 									clientAtDevice.sendDittoProtocol(modifyFrequencyProperties)
 											.whenComplete(((adaptable, throwable) -> {
 												if (throwable != null) {
@@ -180,7 +195,7 @@ public class App
 															throwable.toString());
 												} else {
 													LOGGER.info("proprietà modificata con successo: '{}'", adaptable);
-													getDigitalThing(clientAtDevice);
+													getDigitalThing(clientAtDevice, id);
 													message.reply().httpStatus(HttpStatus.ACCEPTED)
 															.payload("{\"status\":200}").send();
 												}
@@ -208,7 +223,7 @@ public class App
 						System.out.println("PID: " + mqtt.getPid());
 						int frequencyUpdate = thingRappresentation.findValue("frequencyUpdate").asInt();
 						String urlBroker = thingRappresentation.findValue("urlBroker").asText();
-						final Adaptable modifyFrequencyProperties = setMqttProperty("org.eclipse.ditto:smartcoffee",urlBroker,frequencyUpdate, mqtt.getPid());
+						final Adaptable modifyFrequencyProperties = setMqttProperty(id,urlBroker,frequencyUpdate, mqtt.getPid());
 						clientAtDevice.sendDittoProtocol(modifyFrequencyProperties)
 								.whenComplete(((adaptable, throwable) -> {
 									if (throwable != null) {
@@ -217,7 +232,7 @@ public class App
 												throwable.toString());
 									} else {
 										LOGGER.info("proprietà modificata con successo: '{}'", adaptable);
-										getDigitalThing(clientAtDevice);
+										getDigitalThing(clientAtDevice, id);
 										message.reply().httpStatus(HttpStatus.ACCEPTED).payload("{\"status\":200}")
 												.send();
 									}
@@ -242,7 +257,7 @@ public class App
 					ObjectNode jsonData = objectMapper.createObjectNode();
 					jsonData.put("frequencyUpdate", frequencyUpdate);
 					jsonData.put("urlBroker", urlBroker);
-					final Adaptable modifyFrequencyProperties = setMqttProperty("org.eclipse.ditto:smartcoffee",urlBroker,frequencyUpdate, mqtt.getPid());
+					final Adaptable modifyFrequencyProperties = setMqttProperty(id,urlBroker,frequencyUpdate, pid);
 					clientAtDevice.sendDittoProtocol(modifyFrequencyProperties)
 							.whenComplete(((adaptable, throwable) -> {
 								if (throwable != null) {
@@ -251,7 +266,7 @@ public class App
 											throwable.toString());
 								} else {
 									LOGGER.info("proprietà modificata con successo: '{}'", adaptable);
-									getDigitalThing(clientAtDevice);
+									getDigitalThing(clientAtDevice, id);
 									message.reply().httpStatus(HttpStatus.ACCEPTED).payload("{\"status\":200}").send();
 								}
 							}));
@@ -261,7 +276,7 @@ public class App
 					if (mqtt.stop()) {
 						int frequencyUpdate = thingRappresentation.findValue("frequencyUpdate").asInt();
 						String urlBroker = thingRappresentation.findValue("urlBroker").asText();
-						final Adaptable modifyFrequencyProperties = setMqttProperty("org.eclipse.ditto:smartcoffee",urlBroker,frequencyUpdate, mqtt.getPid());
+						final Adaptable modifyFrequencyProperties = setMqttProperty(id,urlBroker,frequencyUpdate, mqtt.getPid());
 						clientAtDevice.sendDittoProtocol(modifyFrequencyProperties)
 								.whenComplete(((adaptable, throwable) -> {
 									if (throwable != null) {
@@ -270,7 +285,7 @@ public class App
 												throwable.toString());
 									} else {
 										LOGGER.info("proprietà modificata con successo: '{}'", adaptable);
-										getDigitalThing(clientAtDevice);
+										getDigitalThing(clientAtDevice, id);
 										message.reply().httpStatus(HttpStatus.ACCEPTED).payload("{\"status\":200}")
 												.send();
 									}
@@ -313,14 +328,35 @@ public class App
 		return modifyFrequencyProperties;
 	}
 	
+	private static Adaptable setStatusProperty(String thingId, String status) {
+		
+	    Timestamp timestamp = new Timestamp(System.currentTimeMillis());
+	    System.out.println(timestamp.getTime());
+	    
+		Adaptable modifyFrequencyProperties = Adaptable
+				.newBuilder(TopicPath.newBuilder(ThingId.of(thingId))
+					.things()
+					.twin()
+					.commands()
+					.modify()
+					.build())
+				.withPayload(Payload
+						.newBuilder(JsonPointer.of("/attributes/status"))
+						.withValue(JsonObject.newBuilder()
+								.set("status", status)
+								.set("lastUpdate", timestamp.getTime()).build())
+						.build())
+				.build();
+		return modifyFrequencyProperties;
+	}
+	
 	private static boolean promptToContinue() {
 		return Boolean.parseBoolean(CONFIG.getProperty("prompt.to.continue", "true"));
 	}
 	
-	private static void getDigitalThing(final DittoClient client) {
+	public static void getDigitalThing(final DittoClient client, String id) {
 		final String namespace = CONFIG.getProperty("ditto.search.namespace", CONFIG.getProperty("ditto.namespace"));
-		final String idThing = CONFIG.getProperty("ditto.thing.id");
-		final String rql1 = "like(thingId,\"" + namespace + ":" + idThing + "\")";
+		final String rql1 = "like(thingId,\"" + id + "\")";
 		final String options1 = "sort(-thingId),size(1)";
 		LOGGER.info("Avvio ricerca thing <{}> con opzioni <{}>...", rql1, options1);
 		client.twin().search().stream(searchQueryBuilder -> searchQueryBuilder.namespace(namespace).filter(rql1)

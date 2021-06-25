@@ -41,7 +41,7 @@ public class Scripts {
 	public boolean exec(String url,  int frequency){
 		 Runtime rt = Runtime.getRuntime();
          try {
-			this.p = Runtime.getRuntime().exec("cmd /c cd FirmwareNodeJs && nar run digital_twin-1.0.0.nar --args-start '"+url+","+frequency+"'");
+			this.p = Runtime.getRuntime().exec("cmd /c cd src\\main\\resources\\firmware && nar run digital_twin-1.0.0.nar --args-start '"+url+","+frequency+"'");
 			
 		//	System.out.println(this.p.pid());
 	         BufferedReader stdInput = new BufferedReader(new 
@@ -91,16 +91,17 @@ public class Scripts {
 	}
 
 	
-	public Boolean estractFileTar() throws IOException {
+	public Boolean estractFileTar(String baseDir) throws IOException {
 	        String so = System.getProperty("os.name");
 	        if(so.contains("Windows")) {
-		        Process process = Runtime.getRuntime().exec("tar -xf FirmwareNodeJs.zip -C C:\\Users\\simon\\eclipse-workspace\\ditto-clients-master\\java\\FirmwareNodeJs");
+		        Process process = Runtime.getRuntime().exec("tar -xf FirmwareNodeJs.zip -C C:\\Users\\simon\\eclipse-workspace\\Device\\device\\src\\main\\resources\\firmaware");
 		      ///  process.isAlive()
 	        }else {
-	        	Process process = Runtime.getRuntime().exec("unzip FirmwareNodeJs.zip -C C:\\Users\\simon\\eclipse-workspace\\ditto-clients-master\\java\\FirmwareNodeJs");
+	        	//Process process = Runtime.getRuntime().exec("unzip FirmwareNodeJs.zip -C C:\\Users\\simon\\eclipse-workspace\\Device\\device\\src\\main\\resources\\firmaware");
+	        	Process process = Runtime.getRuntime().exec("unzip FirmwareNodeJs.zip -C "+baseDir+"Device\\device\\src\\main\\resources\\firmaware");
 	        }         
 	        
-	          Process process1 = Runtime.getRuntime().exec("cmd /c cd FirmwareNodeJs && nar create");	         
+	          Process process1 = Runtime.getRuntime().exec("cmd /c cd firmaware && nar create");	         
 	          return true;
 	}
 	
