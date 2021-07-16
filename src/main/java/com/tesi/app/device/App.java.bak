@@ -49,9 +49,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.neovisionaries.ws.client.WebSocket;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
 
 /**
  * Hello world!
@@ -80,7 +77,6 @@ public class App
 	
     public static void main( String[] args )  throws ExecutionException, InterruptedException, IOException 
     {
-    	ExecutorService executor = Executors.newFixedThreadPool(5);
     	Scripts mqtt = new Scripts();
         LOGGER.info("Avvio applicazione");
         final DittoClient client = DittoClients.newInstance(createMessagingProvider()).connect().toCompletableFuture()
@@ -95,8 +91,8 @@ public class App
 		LOGGER.info("Caricamento digitalTwin completata!");
 		
 		Status status = new Status(client, id);
-	//	status.run();
-		executor.execute(status);
+		status.run();
+		
 		useLiveMessages(client, mqtt, id);
 		
 		System.out.println("\n\nFinished with LIVE messages demo");
@@ -362,14 +358,14 @@ public class App
 		final String namespace = CONFIG.getProperty("ditto.search.namespace", CONFIG.getProperty("ditto.namespace"));
 		final String rql1 = "like(thingId,\"" + id + "\")";
 		final String options1 = "sort(-thingId),size(1)";
-	//	LOGGER.info("Avvio ricerca thing <{}> con opzioni <{}>...", rql1, options1);
+		LOGGER.info("Avvio ricerca thing <{}> con opzioni <{}>...", rql1, options1);
 		client.twin().search().stream(searchQueryBuilder -> searchQueryBuilder.namespace(namespace).filter(rql1)
 				.options(builder -> builder.sort(s -> s.desc("thingId")).size(1)).initialDemand(1).demand(1)
 		).forEach(thing -> {
-		//	LOGGER.info("Ricervuto Thing: <{}>", thing.toJson());
+			LOGGER.info("Ricervuto Thing: <{}>", thing.toJson());
 			CONFIG.setProperty("ditto.digital.thing", thing.toJson().toString());
 		});
-	//	LOGGER.info("Thing correttamente caricato.\n");
+		LOGGER.info("Thing correttamente caricato.\n");
 	}
 	
 	/**

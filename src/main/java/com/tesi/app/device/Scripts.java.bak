@@ -94,14 +94,14 @@ public class Scripts {
 	public Boolean estractFileTar(String baseDir) throws IOException {
 	        String so = System.getProperty("os.name");
 	        if(so.contains("Windows")) {
-		        Process process = Runtime.getRuntime().exec("tar -xf FirmwareNodeJs.zip -C C:\\Users\\simon\\eclipse-workspace\\Device\\device\\src\\main\\resources\\firmware");
+		        Process process = Runtime.getRuntime().exec("tar -xf FirmwareNodeJs.zip -C C:\\Users\\simon\\eclipse-workspace\\Device\\device\\src\\main\\resources\\firmaware");
 		      ///  process.isAlive()
 	        }else {
-	        	//Process process = Runtime.getRuntime().exec("unzip FirmwareNodeJs.zip -C C:\\Users\\simon\\eclipse-workspace\\Device\\device\\src\\main\\resources\\firmware");
+	        	//Process process = Runtime.getRuntime().exec("unzip FirmwareNodeJs.zip -C C:\\Users\\simon\\eclipse-workspace\\Device\\device\\src\\main\\resources\\firmaware");
 	        	Process process = Runtime.getRuntime().exec("unzip FirmwareNodeJs.zip -C "+baseDir+"Device\\device\\src\\main\\resources\\firmaware");
 	        }         
 	        
-	          Process process1 = Runtime.getRuntime().exec("cmd /c cd src\\main\\resources\\firmware && nar create");	         
+	          Process process1 = Runtime.getRuntime().exec("cmd /c cd firmaware && nar create");	         
 	          return true;
 	}
 	
